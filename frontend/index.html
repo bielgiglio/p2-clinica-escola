@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clínica-Escola | Agendamento</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2b6cb0;
+            --secondary-color: #f7fafc;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+        .card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 400px;
+            height: fit-content;
+        }
+        h2 { color: var(--primary-color); margin-top: 0; text-align: center; }
+        .form-group { margin-bottom: 1.2rem; }
+        label { display: block; margin-bottom: 0.5rem; color: #4a5568; font-size: 0.9rem; font-weight: 600; }
+        input, select {
+            width: 100%; padding: 0.75rem; border: 1px solid #cbd5e0; border-radius: 6px;
+            font-size: 1rem; font-family: 'Inter', sans-serif; box-sizing: border-box;
+        }
+        button {
+            width: 100%; padding: 0.8rem; background-color: var(--primary-color); color: white;
+            border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer;
+            margin-top: 1rem;
+        }
+        .message { margin-top: 1.5rem; padding: 1rem; border-radius: 6px; text-align: center; display: none; font-weight: 600; }
+        .success { background-color: #c6f6d5; color: #22543d; }
+        .error { background-color: #fed7d7; color: #742a2a; }
+        
+        .session-item {
+            background: var(--secondary-color);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--primary-color);
+        }
+        .session-item p { margin: 0.2rem 0; font-size: 0.9rem; color: #2d3748; }
+        .session-time { font-weight: 600; color: var(--primary-color); }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Agendar Sessão</h2>
+        <form id="bookingForm">
+            <div class="form-group">
+                <label for="patient">Identificação do Paciente</label>
+                <input type="text" id="patient" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="therapist">Aluno-Terapeuta</label>
+                <select id="therapist" required>
+                    <option value="" disabled selected>Selecione um terapeuta...</option>
+                    <option value="T1">Ana Souza (T1)</option>
+                    <option value="T2">Carlos Mendes (T2)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="modality">Modalidade de Atendimento</label>
+                <select id="modality" required>
+                    <option value="" disabled selected>Selecione a modalidade...</option>
+                    <option value="triagem">Triagem (30 min)</option>
+                    <option value="psicoterapia">Psicoterapia (50 min)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="start">Início da Sessão</label>
+                <input type="datetime-local" id="start" required>
+            </div>
+
+            <button type="submit">Confirmar Agendamento</button>
+        </form>
+        <div id="statusMessage" class="message"></div>
+    </div>
+
+    <div class="card">
+        <h2>Agenda do Dia</h2>
+        <div id="agendaList">
+            <p style="text-align: center; color: #718096;">Nenhuma sessão agendada.</p>
+        </div>
+    </div>
+
+    <script>
+        const inputStart = document.getElementById('start');
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); 
+        inputStart.min = now.toISOString().slice(0, 16);
+
+        function formatDateTime(isoString) {
+            const date = new Date(isoString);
+            const dataFormatada = date.toLocaleDateString('pt-BR');
+            const horaFormatada = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            return `${dataFormatada} - ${horaFormatada}`;
+        }
+
+        async function loadSessions() {
+            try {
+                const response = await fetch('/sessions/list');
+                const sessions = await response.json();
+                const agendaList = document.getElementById('agendaList');
+                
+                if (sessions.length === 0) {
+                    agendaList.innerHTML = '<p style="text-align: center; color: #718096;">Nenhuma sessão agendada.</p>';
+                    return;
+                }
+
+                agendaList.innerHTML = '';
+                sessions.forEach(s => {
+                    const div = document.createElement('div');
+                    div.className = 'session-item';
+                    
+                    const horaFim = formatDateTime(s.end).split(' - ')[1]; 
+                    
+                    div.innerHTML = `
+                        <p class="session-time">${formatDateTime(s.start)} às ${horaFim}</p>
+                        <p><strong>Terapeuta:</strong> ${s.therapist_id}</p>
+                        <p><strong>Paciente:</strong> ${s.patient_id}</p>
+                    `;
+                    agendaList.appendChild(div);
+                });
+            } catch (error) {
+                console.error("Erro ao carregar agenda", error);
+            }
+        }
+
+        document.getElementById('bookingForm').addEventListener('submit', async function(e) {
+            e.preventDefault(); 
+            
+            const msgBox = document.getElementById('statusMessage');
+            msgBox.style.display = 'none';
+            msgBox.className = 'message'; 
+
+            const payload = {
+                patient_id: document.getElementById('patient').value,
+                therapist_id: document.getElementById('therapist').value,
+                modality: document.getElementById('modality').value,
+                start: document.getElementById('start').value 
+            };
+
+            try {
+                const response = await fetch('/sessions/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {a
+                    msgBox.textContent = '✅ Sessão agendada!';
+                    msgBox.classList.add('success');
+                    msgBox.style.display = 'block';
+                    document.getElementById('bookingForm').reset(); 
+                    loadSessions(); 
+                } else {
+                    let erroTraduzido = 'Ocorreu um erro no agendamento.';
+                    
+                    if (data.detail === "Schedule conflict") {
+                        erroTraduzido = "O terapeuta já possui consulta neste horário.";
+                    }
+                    if (data.detail === "Past date not allowed") {
+                        erroTraduzido = "Não é possível agendar em horários que já passaram.";
+                    }
+                    
+                    msgBox.textContent = '❌ ' + erroTraduzido;
+                    msgBox.classList.add('error');
+                    msgBox.style.display = 'block';
+                }
+            } catch (error) {
+                msgBox.textContent = '❌ Erro de conexão com o servidor.';
+                msgBox.classList.add('error');
+                msgBox.style.display = 'block';
+            }
+        });
+
+        loadSessions();
+    </script>
+</body>
+</html>
