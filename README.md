@@ -1,5 +1,7 @@
 # Sistema de Agendamento | Clínica-Escola (P2)
 
+**Link da Aplicação em Produção:** `https://p2-clinica-escola.onrender.com`
+
 
 ## 1. Descrição do Problema e Solução
 Clínicas universitárias que oferecem atendimento psicológico à comunidade enfrentam o desafio de conciliar a fila de pacientes com a disponibilidade fragmentada dos alunos-terapeutas (que dependem das grades de aulas). Além disso, os atendimentos possuem durações matemáticas diferentes (ex: Triagens duram 30 minutos, Psicoterapia dura 50 minutos). 
