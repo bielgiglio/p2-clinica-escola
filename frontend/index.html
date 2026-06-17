@@ -129,12 +129,33 @@
                 sessions.forEach(s => {
                     const div = document.createElement('div');
                     div.className = 'session-item';
+                    
+                    // Configura cores dependendo do Status
+                    let tagCor = '#ecc94b'; let tagTexto = '#744210';
+                    if (s.status === 'CONCLUIDA') { tagCor = '#c6f6d5'; tagTexto = '#22543d'; div.style.opacity = '0.7'; }
+                    if (s.status === 'CANCELADA') { tagCor = '#fed7d7'; tagTexto = '#742a2a'; div.style.opacity = '0.5'; }
+
+                    // Exibe os botões apenas se a sessão estiver pendente
+                    let botoes = '';
+                    if (s.status === 'AGENDADA') {
+                        botoes = `
+                            <div style="margin-top: 10px; display: flex; gap: 10px;">
+                                <button type="button" onclick="mudarStatus('${s.id}', 'CONCLUIDA')" style="background-color: #48bb78; padding: 0.4rem; font-size: 0.8rem; margin-top:0;">✔️ Concluir</button>
+                                <button type="button" onclick="mudarStatus('${s.id}', 'CANCELADA')" style="background-color: #f56565; padding: 0.4rem; font-size: 0.8rem; margin-top:0;">❌ Cancelar</button>
+                            </div>
+                        `;
+                    }
+
                     const horaFim = formatDateTime(s.end).split(' - ')[1]; 
                     
                     div.innerHTML = `
-                        <p class="session-time">${formatDateTime(s.start)} às ${horaFim}</p>
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <p class="session-time">${formatDateTime(s.start)} às ${horaFim}</p>
+                            <span style="background-color: ${tagCor}; color: ${tagTexto}; padding: 3px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: bold;">${s.status}</span>
+                        </div>
                         <p><strong>Terapeuta:</strong> ${s.therapist_id}</p>
                         <p><strong>Paciente:</strong> ${s.patient_id}</p>
+                        ${botoes}
                     `;
                     agendaList.appendChild(div);
                 });
@@ -197,6 +218,15 @@
                 btn.style.opacity = '1';
             }
         });
+
+        async function mudarStatus(id, novoStatus) {
+            try {
+                await fetch(`/sessions/${id}/status?status=${novoStatus}`, { method: 'PATCH' });
+                loadSessions(); 
+            } catch (error) {
+                alert("Erro ao mudar o status.");
+            }
+        }
 
         loadSessions();
     </script>

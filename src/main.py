@@ -8,7 +8,8 @@ import os
 from src.domain.entities import Session
 from src.domain.strategies import TriagemStrategy, PsicoterapiaStrategy
 from src.domain.factories import SessionFactory
-from src.infrastructure.repositories import InMemorySessionRepository
+# 1. AQUI ESTÁ A CORREÇÃO: Importamos apenas o SQLite agora
+from src.infrastructure.repositories import SQLiteSessionRepository
 from src.application.use_cases import CreateSessionUseCase
 
 app = FastAPI(title="Clínica-Escola API")
@@ -21,7 +22,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-repo = InMemorySessionRepository()
+# 2. AQUI ESTÁ A SEGUNDA CORREÇÃO: Instanciamos o banco real
+repo = SQLiteSessionRepository()
 use_case = CreateSessionUseCase(repo)
 
 class SessionRequest(BaseModel):
@@ -62,10 +64,32 @@ def list_sessions():
     sessions = repo.get_all()
     return [
         {
+            "id": s.id,
             "therapist_id": s.therapist_id,
             "patient_id": s.patient_id,
             "start": s.start.isoformat(),
-            "end": s.end.isoformat()
+            "end": s.end.isoformat(),
+            "status": s.status
         }
         for s in sessions
     ]
+
+@app.patch("/sessions/{session_id}/status")
+def update_status(session_id: str, status: str):
+    session = repo.get_by_id(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    
+    try:
+        # Padrão State agindo na troca de status
+        if status == "CONCLUIDA":
+            session.complete()
+        elif status == "CANCELADA":
+            session.cancel()
+        else:
+            raise HTTPException(status_code=400, detail="Status inválido")
+        
+        repo.update(session)
+        return {"message": "Status atualizado com sucesso"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

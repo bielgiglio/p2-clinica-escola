@@ -4,13 +4,16 @@ from datetime import datetime
 
 class SessionRepositoryInterface(ABC):
     @abstractmethod
-    def save(self, session: Session) -> None:
-        pass
+    def save(self, session: Session) -> None: pass
+    
+    @abstractmethod
+    def update(self, session: Session) -> None: pass
+    
+    @abstractmethod
+    def get_by_id(self, session_id: str) -> Session: pass
 
     @abstractmethod
-    def find_overlapping(self, therapist_id: str, start: datetime, end: datetime) -> list[Session]:
-        pass
+    def find_overlapping(self, therapist_id: str, start: datetime, end: datetime) -> list[Session]: pass
 
     @abstractmethod
-    def get_all(self) -> list[Session]:
-        pass
+    def get_all(self) -> list[Session]: pass
